@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: ${DBMS_CONTAINER_IMAGE}
+    container_name: ${DBMS_CONTAINER_NAME}
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+
+  adminer:
+    image: ${ADMIRER_CONTAINER_IMAGE}
+    container_name: ${ADMIRER_CONTAINER_NAME}
+    restart: always
+    ports:
+      - "${ADMIRER_PORT}:${ADMIRER_PORT}"

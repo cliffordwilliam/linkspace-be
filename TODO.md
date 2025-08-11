@@ -1,0 +1,13 @@
+- [ ] typeorm, use signagure for swap
+- [ ] cors
+- [ ] dotenv
+- [ ] joi
+- [ ] winston
+- [ ] zod
+- [ ] eslint
+- [ ] formatter
+- [ ] jest
+- [ ] newman
+- [ ] zod to open api
+- [ ] husky
+- [ ] cicd
