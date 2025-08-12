@@ -29,7 +29,8 @@ readonly RESET_SQL="$DB_DIR/reset_database.sql"
 readonly MIGRATION_SQL="$DB_DIR/schema.sql"
 readonly SEED_SQL="$DB_DIR/seed.sql"
 readonly DOCKER_YAML_FILE_NAME="$DB_DIR/docker-compose.yml"
-readonly PACKAGE_JSON_DEV_SCRIPT_NAME="dev"
+readonly PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME="dev:build"
+readonly PACKAGE_JSON_DEV_START_SCRIPT_NAME="dev:start"
 readonly PACKAGE_JSON_FILE_NAME="package.json"
 # === Variables ===
 DID_CLEANUP=0
@@ -314,9 +315,11 @@ exit_on_lie "Seed SQL file exists" "[ -f \"$SEED_SQL\" ]"
 exit_on_lie "Seeding applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$SEED_SQL\""
 
 print_banner "Starting ${APP_NAME_DESC}"
-exit_on_lie "\"${PACKAGE_JSON_DEV_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+exit_on_lie "\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+exit_on_lie "\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
 exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
-npm run dev & 
+npm run dev:build & 
+npm run dev:start & 
 APP_PID=$!
 wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
 exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "! is_port_free ${PORT}"
