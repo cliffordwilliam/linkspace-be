@@ -9,5 +9,5 @@ app.get("/healthz", (_req, res) => {
 
 // Start HTTP server
 app.listen(3000, "0.0.0.0", () => {
-    console.log("App listening on port 3000")
+  console.log("App listening on port 3000");
 });
