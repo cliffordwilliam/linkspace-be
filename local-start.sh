@@ -121,11 +121,18 @@ copy_env_if_missing() {
 load_env() {
     local env_file_name="$1"
     printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Loading $env_file_name values"
-    set -a
+
+    if [ ! -f "$env_file_name" ]; then
+        exit_helper "$env_file_name is missing" 1
+    fi
+
+    set -o allexport
     if ! source "$env_file_name"; then
+        set +o allexport
         exit_helper "Failed to load $env_file_name — please check for syntax errors." 1
     fi
-    set +a
+    set +o allexport
+
     printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "$env_file_name loaded"
     printf "\n"
 }
@@ -169,45 +176,35 @@ trap cleanup SIGINT SIGTERM EXIT ERR
 
 check_docker_version() {
     local version
-    version=$(docker version --format '{{.Server.Version}}') || return 1
+    version=$(docker version --format '{{.Server.Version}}' 2>/dev/null) || return 1
+    version=$(echo "$version" | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+') || return 1
 
     IFS='.' read -r major minor patch <<< "$version"
 
-    if (( major < DOCKER_REQUIRED_MAJOR_VERSION )); then
-        return 1
-    elif (( major == DOCKER_REQUIRED_MAJOR_VERSION )); then
-        if (( minor < DOCKER_REQUIRED_MINOR_VERSION )); then
-            return 1
-        elif (( minor == DOCKER_REQUIRED_MINOR_VERSION )); then
-            if (( patch < DOCKER_REQUIRED_PATCH_VERSION )); then
-                return 1
-            fi
-        fi
-    fi
+    (( major > DOCKER_REQUIRED_MAJOR_VERSION )) && return 0
+    (( major < DOCKER_REQUIRED_MAJOR_VERSION )) && return 1
 
-    return 0
+    (( minor > DOCKER_REQUIRED_MINOR_VERSION )) && return 0
+    (( minor < DOCKER_REQUIRED_MINOR_VERSION )) && return 1
+
+    (( patch >= DOCKER_REQUIRED_PATCH_VERSION )) && return 0 || return 1
 }
 
 check_node_version() {
     local version
     version=$(node --version 2>/dev/null) || return 1
     version=${version#v}
+    version=$(echo "$version" | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+') || return 1
 
     IFS='.' read -r major minor patch <<< "$version"
 
-    if (( major < NODE_REQUIRED_MAJOR_VERSION )); then
-        return 1
-    elif (( major == NODE_REQUIRED_MAJOR_VERSION )); then
-        if (( minor < NODE_REQUIRED_MINOR_VERSION )); then
-            return 1
-        elif (( minor == NODE_REQUIRED_MINOR_VERSION )); then
-            if (( patch < NODE_REQUIRED_PATCH_VERSION )); then
-                return 1
-            fi
-        fi
-    fi
+    (( major > NODE_REQUIRED_MAJOR_VERSION )) && return 0
+    (( major < NODE_REQUIRED_MAJOR_VERSION )) && return 1
 
-    return 0
+    (( minor > NODE_REQUIRED_MINOR_VERSION )) && return 0
+    (( minor < NODE_REQUIRED_MINOR_VERSION )) && return 1
+
+    (( patch >= NODE_REQUIRED_PATCH_VERSION )) && return 0 || return 1
 }
 
 wait_for_ready() {
@@ -230,16 +227,27 @@ wait_for_ready() {
 
 is_port_free() {
     local port=$1
+
     if command -v nc >/dev/null 2>&1; then
+        # nc returns 0 if port is in use, 1 if free
         nc -z localhost "$port" >/dev/null 2>&1
-        return $(( ! $? ))
+        local status=$?
+    else
+        # /dev/tcp returns 0 if port is in use, 1 if free
+        (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+        local status=$?
     fi
 
-    if (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1; then
-        return 1
+    # Normalize: return 0 if free, 1 if in use
+    if [[ $status -eq 0 ]]; then
+        return 1  # in use
     else
-        return 0
+        return 0  # free
     fi
+}
+
+is_port_in_use() {
+    ! is_port_free "$1"
 }
 
 print_banner "Linkspace BE"
@@ -278,7 +286,7 @@ exit_on_lie "NODE_ENV is valid" '[[ "$NODE_ENV" == "development" || "$NODE_ENV" 
 exit_on_lie "API_PREFIX starts with /" '[[ "$API_PREFIX" == /* ]]'
 
 print_banner "Checking Prerequisites"
-# Jq
+# jq
 exit_on_lie "jq is installed" "command -v jq >/dev/null 2>&1"
 # Docker
 exit_on_lie "Docker is installed" "command -v docker >/dev/null 2>&1"
@@ -322,7 +330,7 @@ npm run dev:build &
 npm run dev:start & 
 APP_PID=$!
 wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
-exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "! is_port_free ${PORT}"
+exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "is_port_in_use ${PORT}"
 printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Press Ctrl C to stop"
 printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Visit ${APP_NAME_DESC} ${PROTOCOL}://${LOCALHOST}:${PORT}${API_PREFIX}"
 printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Visit ${ADMIRER_CONTAINER_NAME} ${PROTOCOL}://${LOCALHOST}:${ADMIRER_PORT}"
