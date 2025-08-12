@@ -18,6 +18,8 @@ readonly ICON_WARNING="⚠️"
 readonly LABEL_WIDTH=15
 readonly BANNER_PADDING=5
 # === Names ===
+readonly ENV_CONFIG_FILE_NAME=".env.config"
+readonly ENV_CONFIG_EXAMPLE_FILE_NAME=".env.config.example"
 readonly ENV_FILE_NAME=".env"
 readonly ENV_EXAMPLE_FILE_NAME=".env.example"
 readonly APP_NAME_DESC="BE app"
@@ -29,15 +31,6 @@ readonly SEED_SQL="$DB_DIR/seed.sql"
 readonly DOCKER_YAML_FILE_NAME="$DB_DIR/docker-compose.yml"
 readonly PACKAGE_JSON_DEV_SCRIPT_NAME="dev"
 readonly PACKAGE_JSON_FILE_NAME="package.json"
-# === Versions ===
-readonly DOCKER_REQUIRED_MAJOR_VERSION=25
-readonly DOCKER_REQUIRED_MINOR_VERSION=0
-readonly DOCKER_REQUIRED_PATCH_VERSION=8
-readonly NODE_REQUIRED_MAJOR_VERSION=22
-readonly NODE_REQUIRED_MINOR_VERSION=18
-readonly NODE_REQUIRED_PATCH_VERSION=0
-# === Settings ===
-readonly MAX_RETRIES=30
 # === Variables ===
 DID_CLEANUP=0
 DID_CREATE_CONTAINER=0
@@ -254,6 +247,11 @@ print_banner "Env Check"
 exit_on_lie "$ENV_EXAMPLE_FILE_NAME is present" "[ -f \"$ENV_EXAMPLE_FILE_NAME\" ]"
 copy_env_if_missing "$ENV_FILE_NAME" "$ENV_EXAMPLE_FILE_NAME"
 load_env "$ENV_FILE_NAME"
+
+print_banner "Env Config Check"
+exit_on_lie "$ENV_CONFIG_EXAMPLE_FILE_NAME is present" "[ -f \"$ENV_CONFIG_EXAMPLE_FILE_NAME\" ]"
+copy_env_if_missing "$ENV_CONFIG_FILE_NAME" "$ENV_CONFIG_EXAMPLE_FILE_NAME"
+load_env "$ENV_CONFIG_FILE_NAME"
 
 print_banner "Validating $ENV_FILE_NAME Variables"
 # PostgreSQL database
