@@ -14,9 +14,9 @@ All responses follow this general structure:
 }
 ```
 
-* `success`: Indicates whether the request was successful (`true` or `false`).
-* `data`: Contains the main response payload.
-* `meta`: Holds additional metadata (e.g., pagination details).
+- `success`: Indicates whether the request was successful (`true` or `false`).
+- `data`: Contains the main response payload.
+- `meta`: Holds additional metadata (e.g., pagination details).
 
 ---
 
@@ -168,6 +168,6 @@ Error responses should include at least a message describing the error. Optional
 }
 ```
 
-* `message` (required): General description of the error.
-* `code` (optional): Numeric error code.
-* `details` (optional): Array of specific errors tied to individual fields.
+- `message` (required): General description of the error.
+- `code` (optional): Numeric error code.
+- `details` (optional): Array of specific errors tied to individual fields.
