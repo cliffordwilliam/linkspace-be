@@ -1,0 +1,26 @@
+name: ESLint Check
+on: [push, pull_request]
+jobs:
+  eslint-check-action:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔬 Run ESLint (check only)
+        run: |
+          echo "🔍 Running ESLint on src/..."
+          npx eslint src --ext .ts || {
+            echo "❌ ESLint check failed!"
+            echo "💡 Run 'npx eslint src --ext .ts --fix' locally to fix fixable issues."
+            exit 1
+          }

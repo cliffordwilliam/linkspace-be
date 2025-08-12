@@ -4,10 +4,10 @@
 - [ ] joi
 - [ ] winston
 - [ ] zod
-- [ ] eslint
-- [ ] formatter
+- [x] eslint
+- [x] formatter
 - [ ] jest
 - [ ] newman
 - [ ] zod to open api
-- [ ] husky
-- [ ] cicd
+- [x] husky
+- [x] cicd
