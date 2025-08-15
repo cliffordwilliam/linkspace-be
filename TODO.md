@@ -1,7 +1,7 @@
 # TODO
 
 - [ ] typeorm, use signagure for swap
-- [ ] cors
+- [x] cors
 - [x] dotenv
 - ~~[ ] joi~~
 - ~~[ ] winston~~
