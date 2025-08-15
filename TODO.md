@@ -4,7 +4,8 @@
 - [ ] cors
 - [x] dotenv
 - ~~[ ] joi~~
-- [ ] winston
+- ~~[ ] winston~~
+- [x] pino
 - [x] zod
 - [x] eslint
 - [x] formatter
