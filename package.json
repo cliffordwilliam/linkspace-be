@@ -8,7 +8,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev:build": "tsc --watch --preserveWatchOutput",
+    "dev:build": "tsc --preserveWatchOutput && concurrently \"tsc -w --preserveWatchOutput\" \"tsc-alias -w\"",
     "dev:start": "nodemon dist/index.js",
     "prepare": "husky"
   },
@@ -27,16 +27,20 @@
     "@eslint/js": "^9.33.0",
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.1",
+    "concurrently": "^9.2.0",
     "eslint": "^9.33.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "nodemon": "^3.1.10",
     "prettier": "3.6.2",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.39.1"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "zod": "^4.0.17"
   }
 }

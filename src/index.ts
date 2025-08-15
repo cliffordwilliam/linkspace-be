@@ -1,4 +1,5 @@
 import express from "express";
+import { env } from "@/core/config/env-config";
 
 const app = express();
 
@@ -8,6 +9,6 @@ app.get("/healthz", (_req, res) => {
 });
 
 // Start HTTP server
-app.listen(3000, "0.0.0.0", () => {
-  console.log("App listening on port 3000");
+app.listen(env.port, "0.0.0.0", () => {
+  console.log(`App listening on port ${env.port}`);
 });

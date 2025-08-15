@@ -2,10 +2,10 @@
 
 - [ ] typeorm, use signagure for swap
 - [ ] cors
-- [ ] dotenv
-- [ ] joi
+- [x] dotenv
+- ~~[ ] joi~~
 - [ ] winston
-- [ ] zod
+- [x] zod
 - [x] eslint
 - [x] formatter
 - [ ] jest

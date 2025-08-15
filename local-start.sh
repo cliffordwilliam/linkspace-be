@@ -35,6 +35,8 @@ readonly DOCKER_YAML_FILE_NAME="$DB_DIR/docker-compose.yml"
 readonly PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME="dev:build"
 readonly PACKAGE_JSON_DEV_START_SCRIPT_NAME="dev:start"
 readonly PACKAGE_JSON_FILE_NAME="package.json"
+readonly DIST_DIR="dist"
+readonly BUILT_ENTRY_FILE="$DIST_DIR/index.js"
 
 # === Variables ===
 DID_CLEANUP=0
@@ -49,6 +51,25 @@ print_status() {
     local message="${4:-}"
     printf "${color}${icon} %-*s${NC}" "$LABEL_WIDTH" "$label"
     [[ -n "$message" ]] && printf " %s" "$message"
+    printf "\n"
+}
+
+wait_for_build() {
+    local file="$1"
+    local name="${2:-Build}"
+    local retries=0
+
+    print_status "$YELLOW" "$ICON_INFO" "Waiting for $name to complete..." "$file"
+
+    until [ -f "$file" ]; do
+        if (( retries >= MAX_RETRIES )); then
+            exit_helper "❌ $name did not produce $file after $MAX_RETRIES attempts" 1
+        fi
+        retries=$((retries + 1))
+        sleep 0.5
+    done
+
+    print_status "$GREEN" "$ICON_SUCCESS" "$name ready" "$file exists"
     printf "\n"
 }
 
@@ -160,6 +181,16 @@ cleanup() {
     printf "\n"
 
     print_banner "Cleaning Up"
+
+    # Delete dist directory if it exists
+    if [ -d "$DIST_DIR" ]; then
+        print_status "$YELLOW" "$ICON_COPY" "Deleting build directory" "$DIST_DIR"
+        rm -rf "$DIST_DIR"
+        print_status "$GREEN" "$ICON_SUCCESS" "Deleted $DIST_DIR"
+    else
+        print_status "$GREEN" "$ICON_SUCCESS" "$DIST_DIR does not exist, nothing to delete"
+    fi
+    printf "\n"
 
     # Kill TypeScript build watcher
     print_status "$YELLOW" "$ICON_COPY" "Checking for running build process"
@@ -362,8 +393,10 @@ exit_on_lie "\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\" script exists in ${PACKAG
 exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
 npm run dev:build &
 BUILD_PID=$!
+wait_for_build "$BUILT_ENTRY_FILE" "TypeScript Build"
 npm run dev:start &
 APP_PID=$!
+wait $BUILD_PID $APP_PID
 wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
 exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "is_port_in_use ${PORT}"
 print_status "$GREEN" "$ICON_SUCCESS" "Press Ctrl C to stop"
