@@ -7,6 +7,7 @@ readonly YELLOW='\033[1;33m'
 readonly GREEN='\033[1;32m'
 readonly RED='\033[1;31m'
 readonly NC='\033[0m'
+
 # === Icons ===
 readonly ICON_INFO="🔍"
 readonly ICON_EXIT="🚪"
@@ -14,9 +15,11 @@ readonly ICON_SUCCESS="✅"
 readonly ICON_FAIL="❌"
 readonly ICON_COPY="📋"
 readonly ICON_WARNING="⚠️"
+
 # === Formatting ===
 readonly LABEL_WIDTH=15
 readonly BANNER_PADDING=5
+
 # === Names ===
 readonly ENV_CONFIG_FILE_NAME=".env.config"
 readonly ENV_CONFIG_EXAMPLE_FILE_NAME=".env.config.example"
@@ -32,10 +35,22 @@ readonly DOCKER_YAML_FILE_NAME="$DB_DIR/docker-compose.yml"
 readonly PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME="dev:build"
 readonly PACKAGE_JSON_DEV_START_SCRIPT_NAME="dev:start"
 readonly PACKAGE_JSON_FILE_NAME="package.json"
+
 # === Variables ===
 DID_CLEANUP=0
 DID_CREATE_CONTAINER=0
 APP_PID=0
+BUILD_PID=0
+
+print_status() {
+    local color="$1"
+    local icon="$2"
+    local label="$3"
+    local message="${4:-}"
+    printf "${color}${icon} %-*s${NC}" "$LABEL_WIDTH" "$label"
+    [[ -n "$message" ]] && printf " %s" "$message"
+    printf "\n"
+}
 
 exit_helper() {
     local exit_message="$1"
@@ -48,8 +63,7 @@ exit_helper() {
         message_color="$RED"
     fi
 
-    printf "${RED}${ICON_EXIT} %-*s${NC} ${message_color}%s${NC}\n" \
-        "$LABEL_WIDTH" "Exiting:" "$exit_message"
+    print_status "$RED" "$ICON_EXIT" "Exiting:" "$exit_message"
     printf "\n"
 
     exit "$exit_code"
@@ -59,7 +73,7 @@ exit_on_lie() {
     local action_name="$1"
     local condition="$2"
 
-    printf "${YELLOW}${ICON_INFO} %-*s${NC} %s\n" "$LABEL_WIDTH" "Statement:" "$action_name"
+    print_status "$YELLOW" "$ICON_INFO" "Statement:" "$action_name"
 
     local status_label
     local status_icon
@@ -75,7 +89,7 @@ exit_on_lie() {
         status_color="$GREEN"
     fi
 
-    printf "${status_color}${status_icon} %-*s${NC}\n" "$LABEL_WIDTH" "$status_label"
+    print_status "$status_color" "$status_icon" "$status_label"
     printf "\n"
 
     if [[ "$status_label" == "Lie" ]]; then
@@ -102,10 +116,10 @@ copy_env_if_missing() {
     local env_file_name="$1"
     local example_env_file_name="$2"
 
-    printf "${YELLOW}${ICON_INFO} %-*s${NC} %s\n" "$LABEL_WIDTH" "Checking:" "$env_file_name file presence"
+    print_status "$YELLOW" "$ICON_INFO" "Checking:" "$env_file_name file presence"
     if [ ! -f "$env_file_name" ]; then
-        printf "${RED}${ICON_FAIL} %-*s${NC}\n" "$LABEL_WIDTH" "$env_file_name file missing"
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Copying $example_env_file_name → $env_file_name"
+        print_status "$RED" "$ICON_FAIL" "$env_file_name file missing"
+        print_status "$YELLOW" "$ICON_COPY" "Copying $example_env_file_name → $env_file_name"
         if cp "$example_env_file_name" "$env_file_name"; then
             success_msg="$env_file_name created"
         else
@@ -114,13 +128,13 @@ copy_env_if_missing() {
     else
         success_msg="$env_file_name is present"
     fi
-    printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "$success_msg"
+    print_status "$GREEN" "$ICON_SUCCESS" "$success_msg"
     printf "\n"
 }
 
 load_env() {
     local env_file_name="$1"
-    printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Loading $env_file_name values"
+    print_status "$YELLOW" "$ICON_COPY" "Loading $env_file_name values"
 
     if [ ! -f "$env_file_name" ]; then
         exit_helper "$env_file_name is missing" 1
@@ -133,7 +147,7 @@ load_env() {
     fi
     set +o allexport
 
-    printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "$env_file_name loaded"
+    print_status "$GREEN" "$ICON_SUCCESS" "$env_file_name loaded"
     printf "\n"
 }
 
@@ -147,26 +161,37 @@ cleanup() {
 
     print_banner "Cleaning Up"
 
-    # Kill app
-    printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Checking for running $APP_NAME_DESC"
+    # Kill TypeScript build watcher
+    print_status "$YELLOW" "$ICON_COPY" "Checking for running build process"
+    if [ "${BUILD_PID:-0}" -ne 0 ]; then
+        print_status "$YELLOW" "$ICON_COPY" "Stopping build process"
+        kill -- -"$BUILD_PID" 2>/dev/null || true
+        BUILD_PID=0
+    else
+        print_status "$YELLOW" "$ICON_COPY" "Build process is not running"
+    fi
+    printf "\n"
+
+    # Kill application process
+    print_status "$YELLOW" "$ICON_COPY" "Checking for running $APP_NAME_DESC"
     if [ "${APP_PID:-0}" -ne 0 ]; then
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Stopping $APP_NAME_DESC"
+        print_status "$YELLOW" "$ICON_COPY" "Stopping $APP_NAME_DESC"
         kill -- -"$APP_PID" 2>/dev/null || true
         APP_PID=0
     else
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "$APP_NAME_DESC is not running"
+        print_status "$YELLOW" "$ICON_COPY" "$APP_NAME_DESC is not running"
     fi
     printf "\n"
 
     # Kill DBMS containers & volumes
     exit_on_lie "Docker is installed" "command -v docker >/dev/null 2>&1"
     if [ "$DID_CREATE_CONTAINER" -eq 1 ]; then
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Stopping $DBMS_CONTAINER_DESC"
+        print_status "$YELLOW" "$ICON_COPY" "Stopping $DBMS_CONTAINER_DESC"
         exit_on_lie "Stopping and removing DBMS + volumes" \
             "docker compose --env-file \"$ENV_FILE_NAME\" -f \"$DOCKER_YAML_FILE_NAME\" down -v --remove-orphans"
         DID_CREATE_CONTAINER=0
     else
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "$DBMS_CONTAINER_DESC is not made"
+        print_status "$YELLOW" "$ICON_COPY" "$DBMS_CONTAINER_DESC is not made"
     fi
     printf "\n"
 
@@ -218,24 +243,25 @@ wait_for_ready() {
         if (( retries >= max_retries )); then
             exit_helper "❌ $name did not become ready in time." 1
         fi
-        printf "${YELLOW}${ICON_COPY} %-*s${NC}\n" "$LABEL_WIDTH" "Waiting for ${name}... (attempt $((retries+1))/$max_retries)"
+        print_status "$YELLOW" "$ICON_COPY" "Waiting for ${name}... (attempt $((retries+1))/$max_retries)"
         retries=$((retries+1))
         sleep 1
     done
-    printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "$name is ready"
+    print_status "$GREEN" "$ICON_SUCCESS" "$name is ready"
 }
 
 is_port_free() {
-    local port=$1
+    local port="$1"
+    local status=1  # default: in use
 
     if command -v nc >/dev/null 2>&1; then
-        # nc returns 0 if port is in use, 1 if free
-        nc -z localhost "$port" >/dev/null 2>&1
-        local status=$?
+        # Try both GNU and BSD netcat variants
+        nc -z -w 1 localhost "$port" >/dev/null 2>&1
+        status=$?
     else
-        # /dev/tcp returns 0 if port is in use, 1 if free
-        (echo > "/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
-        local status=$?
+        # /dev/tcp returns 0 if open (in use), non-zero if closed
+        (echo >"/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+        status=$?
     fi
 
     # Normalize: return 0 if free, 1 if in use
@@ -284,6 +310,14 @@ exit_on_lie "ADMIRER_CONTAINER_IMAGE is not empty" '[[ -n "$ADMIRER_CONTAINER_IM
 # App state
 exit_on_lie "NODE_ENV is valid" '[[ "$NODE_ENV" == "development" || "$NODE_ENV" == "production" || "$NODE_ENV" == "test" ]]'
 exit_on_lie "API_PREFIX starts with /" '[[ "$API_PREFIX" == /* ]]'
+# Script or tooling config
+exit_on_lie "MAX_RETRIES is a positive integer" '[[ "$MAX_RETRIES" =~ ^[0-9]+$ && "$MAX_RETRIES" -ge 1 ]]'
+exit_on_lie "DOCKER_REQUIRED_MAJOR_VERSION is a positive integer" '[[ "$DOCKER_REQUIRED_MAJOR_VERSION" =~ ^[0-9]+$ && "$DOCKER_REQUIRED_MAJOR_VERSION" -ge 1 ]]'
+exit_on_lie "DOCKER_REQUIRED_MINOR_VERSION is a non-negative integer" '[[ "$DOCKER_REQUIRED_MINOR_VERSION" =~ ^[0-9]+$ && "$DOCKER_REQUIRED_MINOR_VERSION" -ge 0 ]]'
+exit_on_lie "DOCKER_REQUIRED_PATCH_VERSION is a non-negative integer" '[[ "$DOCKER_REQUIRED_PATCH_VERSION" =~ ^[0-9]+$ && "$DOCKER_REQUIRED_PATCH_VERSION" -ge 0 ]]'
+exit_on_lie "NODE_REQUIRED_MAJOR_VERSION is a positive integer" '[[ "$NODE_REQUIRED_MAJOR_VERSION" =~ ^[0-9]+$ && "$NODE_REQUIRED_MAJOR_VERSION" -ge 1 ]]'
+exit_on_lie "NODE_REQUIRED_MINOR_VERSION is a non-negative integer" '[[ "$NODE_REQUIRED_MINOR_VERSION" =~ ^[0-9]+$ && "$NODE_REQUIRED_MINOR_VERSION" -ge 0 ]]'
+exit_on_lie "NODE_REQUIRED_PATCH_VERSION is a non-negative integer" '[[ "$NODE_REQUIRED_PATCH_VERSION" =~ ^[0-9]+$ && "$NODE_REQUIRED_PATCH_VERSION" -ge 0 ]]'
 
 print_banner "Checking Prerequisites"
 # jq
@@ -326,12 +360,13 @@ print_banner "Starting ${APP_NAME_DESC}"
 exit_on_lie "\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
 exit_on_lie "\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
 exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
-npm run dev:build & 
-npm run dev:start & 
+npm run dev:build &
+BUILD_PID=$!
+npm run dev:start &
 APP_PID=$!
 wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
 exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "is_port_in_use ${PORT}"
-printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Press Ctrl C to stop"
-printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Visit ${APP_NAME_DESC} ${PROTOCOL}://${LOCALHOST}:${PORT}${API_PREFIX}"
-printf "${GREEN}${ICON_SUCCESS} %-*s${NC}\n" "$LABEL_WIDTH" "Visit ${ADMIRER_CONTAINER_NAME} ${PROTOCOL}://${LOCALHOST}:${ADMIRER_PORT}"
+print_status "$GREEN" "$ICON_SUCCESS" "Press Ctrl C to stop"
+print_status "$GREEN" "$ICON_SUCCESS" "Visit ${APP_NAME_DESC} ${PROTOCOL}://${LOCALHOST}:${PORT}${API_PREFIX}"
+print_status "$GREEN" "$ICON_SUCCESS" "Visit ${ADMIRER_CONTAINER_NAME} ${PROTOCOL}://${LOCALHOST}:${ADMIRER_PORT}"
 wait $APP_PID
