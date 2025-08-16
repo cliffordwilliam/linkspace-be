@@ -307,7 +307,7 @@ is_port_in_use() {
     ! is_port_free "$1"
 }
 
-print_banner "Linkspace BE"
+print_banner "market-space-be"
 
 print_banner "Env Check"
 exit_on_lie "$ENV_EXAMPLE_FILE_NAME is present" "[ -f \"$ENV_EXAMPLE_FILE_NAME\" ]"
