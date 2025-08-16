@@ -7,6 +7,7 @@ import {
   ProductDTO,
 } from "../schemas/ProductDTO";
 import { DataSource } from "typeorm";
+import { ResourceNotFoundException } from "@/api/models/ResourceNotFoundException";
 
 export class ManageProductService {
   private repo: BaseProductRepository;
@@ -36,7 +37,10 @@ export class ManageProductService {
 
   async getById(productId: string): Promise<ProductDTO | null> {
     const product = await this.repo.getById(productId);
-    if (!product) return null; // Will replace with ResourceNotFoundException later
+    if (!product)
+      throw new ResourceNotFoundException(
+        `Product with id ${productId} not found`,
+      );
     return this._toDTO(product);
   }
 
@@ -45,7 +49,10 @@ export class ManageProductService {
     updates: ProductUpdateDTO,
   ): Promise<ProductDTO | null> {
     const existingProduct = await this.repo.getById(productId);
-    if (!existingProduct) return null; // Will replace with ResourceNotFoundException later
+    if (!existingProduct)
+      throw new ResourceNotFoundException(
+        `Product with id ${productId} not found`,
+      );
 
     if (updates.product_name !== undefined)
       existingProduct.product_name = updates.product_name;

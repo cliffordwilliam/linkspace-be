@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] typeorm, use signagure for swap
+- [x] typeorm, use signagure for swap
 - [x] cors
 - [x] dotenv
 - ~~[ ] joi~~
