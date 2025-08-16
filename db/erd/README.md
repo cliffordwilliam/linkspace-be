@@ -4,6 +4,6 @@
 
 ```mermaid
 erDiagram
-  %% USER MANAGEMENT
-  users
+  %% PRODUCT MANAGEMENT
+  product
 ```
