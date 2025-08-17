@@ -12,5 +12,6 @@ export class DTOValidationException extends Error {
   ) {
     super("Request validation error");
     this.name = "DTOValidationException";
+    this.errors = Array.isArray(errors) ? errors : [errors];
   }
 }

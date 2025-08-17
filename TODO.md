@@ -14,4 +14,5 @@
 - [ ] zod to open api
 - [x] husky
 - [x] cicd
-- [ ] query filter
+- [x] query filter
+- [ ] move magics to const

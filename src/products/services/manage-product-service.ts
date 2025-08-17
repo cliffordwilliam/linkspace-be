@@ -9,6 +9,8 @@ import {
 import { DataSource } from "typeorm";
 import { ResourceNotFoundException } from "@/api/errors/resource-not-found-exception";
 import { plainToInstance, instanceToPlain } from "class-transformer";
+import { ProductListFiltersDTO } from "@/products/schemas/product-filters-dto";
+import { PaginatedResponse } from "@/common/dto/paginated-response";
 
 export class ManageProductService {
   private repo: BaseProductRepository;
@@ -57,10 +59,16 @@ export class ManageProductService {
     });
   }
 
-  async listAll(): Promise<ProductDTO[]> {
-    const products = await this.repo.listAll();
-    return products.map((p) =>
+  async listAll(
+    filters: ProductListFiltersDTO,
+  ): Promise<PaginatedResponse<ProductDTO>> {
+    const paginatedProducts = await this.repo.listAll(filters);
+    const data = paginatedProducts.data.map((p) =>
       plainToInstance(ProductDTO, p, { excludeExtraneousValues: true }),
     );
+    return {
+      data,
+      meta: paginatedProducts.meta,
+    };
   }
 }

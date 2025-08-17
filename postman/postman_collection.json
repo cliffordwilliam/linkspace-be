@@ -47,12 +47,12 @@
                   "pm.test(\"Product created\", function () {",
                   "  pm.response.to.have.status(201);",
                   "  pm.expect(json.data).to.be.an('object');",
-                  "  pm.expect(json.data.product_name).to.eql('Gaming Laptop');",
+                  "  pm.expect(json.data.product_name).to.eql(pm.environment.get('createdProductName'));",
                   "});",
                   "",
                   "// Save product ID for later requests",
-                  "const productId = json.data.id || json.data.product_id;",
-                  "pm.environment.set(\"productId\", productId);"
+                  "const createdProductId = json.data.product_id;",
+                  "pm.environment.set(\"createdProductId\", createdProductId);"
                 ],
                 "type": "text/javascript"
               }
@@ -63,7 +63,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"product_name\": \"Gaming Laptop\",\n  \"deleted_status\": false\n}"
+              "raw": "{\n  \"product_name\": \"{{createdProductName}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/products",
@@ -106,8 +106,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (!pm.environment.get('productId')) {",
-                  "  throw new Error('productId not set. Run Create Product first.');",
+                  "if (!pm.environment.get('createdProductId')) {",
+                  "  throw new Error('createdProductId not set. Run Create Product first.');",
                   "}"
                 ]
               }
@@ -120,7 +120,7 @@
                   "pm.test(\"Fetched product by ID\", function () {",
                   "  pm.response.to.have.status(200);",
                   "  const json = pm.response.json();",
-                  "  pm.expect(json.data.product_id).to.eql(pm.environment.get(\"productId\"));",
+                  "  pm.expect(json.data.product_id).to.eql(pm.environment.get(\"createdProductId\"));",
                   "});"
                 ]
               }
@@ -129,9 +129,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/v1/products/{{productId}}",
+              "raw": "{{baseUrl}}/api/v1/products/{{createdProductId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "products", "{{productId}}"]
+              "path": ["api", "v1", "products", "{{createdProductId}}"]
             }
           }
         },
@@ -142,8 +142,8 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "if (!pm.environment.get('productId')) {",
-                  "  throw new Error('productId not set. Run Create Product first.');",
+                  "if (!pm.environment.get('createdProductId')) {",
+                  "  throw new Error('createdProductId not set. Run Create Product first.');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -156,7 +156,7 @@
                   "const json = pm.response.json();",
                   "pm.test(\"Product updated\", function () {",
                   "  pm.response.to.have.status(200);",
-                  "  pm.expect(json.data.product_name).to.eql('Gaming Laptop Pro');",
+                  "  pm.expect(json.data.deleted_status).to.eql(true);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -168,14 +168,173 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"product_name\": \"Gaming Laptop Pro\",\n  \"deleted_status\": false\n}"
+              "raw": "{\n  \"deleted_status\": true\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/products/{{productId}}",
+              "raw": "{{baseUrl}}/api/v1/products/{{createdProductId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "products", "{{productId}}"]
+              "path": ["api", "v1", "products", "{{createdProductId}}"]
             }
           }
+        },
+        {
+          "name": "Filter Products",
+          "item": [
+            {
+              "name": "Filter Products AND Mode",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "pm.test(`Filter by product_name '{{seededProductName}}' and deleted_status false`, function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(json.data).to.be.an('array');",
+                      "    pm.expect(json.data.length).to.eql(1);",
+                      "    pm.expect(json.data[0].product_name).to.eql(pm.environment.get('seededProductName'));",
+                      "    pm.expect(json.data[0].deleted_status).to.eql(false);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products?product_name={{seededProductName}}&deleted_status=false&mode=AND",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "products"],
+                  "query": [
+                    { "key": "product_name", "value": "{{seededProductName}}" },
+                    { "key": "deleted_status", "value": "false" },
+                    { "key": "mode", "value": "AND" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Filter Products OR Mode",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "pm.test(`Filter by product_name '{{seededProductName}}' OR deleted_status true`, function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(json.data).to.be.an('array');",
+                      "    pm.expect(json.data.some(p => p.product_name === pm.environment.get('seededProductName'))).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products?product_name={{seededProductName}}&deleted_status=true&mode=OR",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "products"],
+                  "query": [
+                    { "key": "product_name", "value": "{{seededProductName}}" },
+                    { "key": "deleted_status", "value": "true" },
+                    { "key": "mode", "value": "OR" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Filter Products by Name Only",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "pm.test(`Filter by product_name '{{seededProductName}}' only`, function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(json.data.every(p => p.product_name.includes(pm.environment.get('seededProductName')))).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products?product_name={{seededProductName}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "products"],
+                  "query": [
+                    { "key": "product_name", "value": "{{seededProductName}}" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Filter Products by Deleted Status Only",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "pm.test(`Filter by deleted_status false only`, function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(json.data.every(p => p.deleted_status === false)).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products?deleted_status=false",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "products"],
+                  "query": [{ "key": "deleted_status", "value": "false" }]
+                }
+              }
+            },
+            {
+              "name": "Filter Products with Pagination",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "pm.test(`Pagination works with page=1 & page_size=2`, function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(json.data.length).to.be.at.most(2);",
+                      "    pm.expect(json.meta.page).to.eql(1);",
+                      "    pm.expect(json.meta.page_size).to.eql(2);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products?page=1&page_size=2",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "products"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "2" }
+                  ]
+                }
+              }
+            }
+          ]
         }
       ]
     }

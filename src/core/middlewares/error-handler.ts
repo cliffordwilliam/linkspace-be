@@ -22,13 +22,15 @@ export function errorHandler(
   }
 
   if (err instanceof DTOValidationException) {
-    const details = err.errors.flatMap((e) =>
-      Object.entries(e.constraints || {}).map(([constraint, msg]) => ({
-        field: `${err.source}.${e.property}`,
-        message: msg,
-        type: constraint,
-      })),
-    );
+    const details = Array.isArray(err.errors)
+      ? err.errors.flatMap((e) =>
+          Object.entries(e.constraints || {}).map(([constraint, msg]) => ({
+            field: `${err.source}.${e.property}`,
+            message: msg,
+            type: constraint,
+          })),
+        )
+      : [];
 
     const response = new ApiErrorResponse({
       message: err.message,

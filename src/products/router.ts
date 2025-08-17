@@ -7,9 +7,13 @@ import {
   ProductDTO,
 } from "@/products/schemas/product-dto";
 import { HTTP_STATUS } from "@/common/constants/http";
-import { validateDTO } from "@/core/middlewares/validate-dto";
+import {
+  ValidatedRequestQuery,
+  validateDTO,
+} from "@/core/middlewares/validate-dto";
 import { REQUEST_SOURCE } from "@/common/constants/request-source";
 import { IdParamDTO } from "@/common/dto/id-param-dto";
+import { ProductListFiltersDTO } from "@/products/schemas/product-filters-dto";
 
 export const router = Router();
 const service = new ManageProductService(AppDataSource);
@@ -28,14 +32,21 @@ router.post(
   },
 );
 
-router.get("", async (_req: Request, res: Response) => {
-  const products: ProductDTO[] = await service.listAll();
-  res.status(HTTP_STATUS.OK).json({
-    success: true,
-    data: products,
-    meta: {},
-  });
-});
+router.get(
+  "",
+  validateDTO(ProductListFiltersDTO, REQUEST_SOURCE.QUERY),
+  async (req: Request, res: Response) => {
+    const filters = (
+      req as unknown as ValidatedRequestQuery<ProductListFiltersDTO>
+    ).validatedQuery;
+    const result = await service.listAll(filters);
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
 
 router.get(
   "/:id",
