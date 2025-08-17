@@ -28,6 +28,10 @@ const envSchema = z.object({
     NODE_ENVS.CI,
   ]),
   API_PREFIX: z.string().min(1, "API_PREFIX is required"),
+
+  // CORS
+  CORS_ORIGIN: z.string().optional(),
+  CORS_ORIGINS: z.string().optional(),
 });
 
 // Validate and parse
@@ -47,4 +51,11 @@ export const env = {
     name: envVars.DB_NAME,
   },
   admirerPort: envVars.ADMIRER_PORT,
+  cors: {
+    origins: envVars.CORS_ORIGINS
+      ? envVars.CORS_ORIGINS.split(",").map((o) => o.trim())
+      : envVars.CORS_ORIGIN
+        ? [envVars.CORS_ORIGIN]
+        : [],
+  },
 };

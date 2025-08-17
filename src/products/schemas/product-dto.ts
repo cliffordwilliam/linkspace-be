@@ -7,7 +7,7 @@ import {
   IsUUID,
 } from "class-validator";
 import { Expose } from "class-transformer";
-import { BaseDTO } from "@/common/dto/BaseDTO";
+import { BaseDTO } from "@/common/dto/base-dto";
 
 // --- Base DTO ---
 export class ProductBaseDTO extends BaseDTO {

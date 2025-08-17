@@ -5,8 +5,8 @@ import {
   RequestSource,
   REQUEST_SOURCE,
 } from "@/common/constants/request-source";
-import { DTOValidationException } from "@/api/models/DTOValidationException";
-import { BaseDTO } from "@/common/dto/BaseDTO";
+import { DTOValidationException } from "@/api/errors/dto-validation-exception";
+import { BaseDTO } from "@/common/dto/base-dto";
 
 export const validateDTO = (
   DTOClass: ClassConstructor<BaseDTO>,

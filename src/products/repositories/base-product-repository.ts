@@ -1,4 +1,4 @@
-import { ProductModel } from "@/products/models/ProductModel";
+import { ProductModel } from "@/products/models/product-model";
 
 export abstract class BaseProductRepository {
   abstract create(product: ProductModel): Promise<ProductModel>;

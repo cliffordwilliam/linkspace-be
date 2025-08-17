@@ -1,6 +1,6 @@
 import { DataSource } from "typeorm";
-import { ProductModel } from "@/products/models/ProductModel";
-import { BaseProductRepository } from "@/products/repositories/BaseProductRepository";
+import { ProductModel } from "@/products/models/product-model";
+import { BaseProductRepository } from "@/products/repositories/base-product-repository";
 
 export class TypeOrmProductRepository extends BaseProductRepository {
   constructor(private dataSource: DataSource) {

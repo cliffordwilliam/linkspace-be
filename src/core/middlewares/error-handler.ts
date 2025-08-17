@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { ResourceNotFoundException } from "@/api/models/ResourceNotFoundException";
-import { ApiErrorResponse } from "@/api/models/ApiErrorResponse";
+import { ResourceNotFoundException } from "@/api/errors/resource-not-found-exception";
+import { ApiErrorResponse } from "@/api/errors/api-error-response";
 import { HTTP_STATUS } from "@/common/constants/http";
 import { logger } from "@/core/logger/logger";
-import { DTOValidationException } from "@/api/models/DTOValidationException";
+import { DTOValidationException } from "@/api/errors/dto-validation-exception";
 
 export function errorHandler(
   err: unknown,

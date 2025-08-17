@@ -1,13 +1,13 @@
-import { ProductModel } from "@/products/models/ProductModel";
-import { BaseProductRepository } from "@/products/repositories/BaseProductRepository";
-import { TypeOrmProductRepository } from "@/products/repositories/TypeOrmProductRepository";
+import { ProductModel } from "@/products/models/product-model";
+import { BaseProductRepository } from "@/products/repositories/base-product-repository";
+import { TypeOrmProductRepository } from "@/products/repositories/typeorm-product-repository";
 import {
   ProductCreateDTO,
   ProductUpdateDTO,
   ProductDTO,
-} from "@/products/schemas/ProductDTO";
+} from "@/products/schemas/product-dto";
 import { DataSource } from "typeorm";
-import { ResourceNotFoundException } from "@/api/models/ResourceNotFoundException";
+import { ResourceNotFoundException } from "@/api/errors/resource-not-found-exception";
 import { plainToInstance, instanceToPlain } from "class-transformer";
 
 export class ManageProductService {
@@ -25,7 +25,7 @@ export class ManageProductService {
     });
   }
 
-  async getById(productId: string): Promise<ProductDTO | null> {
+  async getById(productId: string): Promise<ProductDTO> {
     const product = await this.repo.getById(productId);
     if (!product)
       throw new ResourceNotFoundException(
