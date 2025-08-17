@@ -1,0 +1,75 @@
+name: Newman E2E Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  newman-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: market-space-be
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d market-space-be"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app
+        run: npm run dev:build
+
+      - name: Start app
+        run: |
+          npm run dev:start &
+          echo $! > app.pid
+
+      - name: Wait for app to be ready
+        run: |
+          for i in {1..20}; do
+            if curl -s http://localhost:3000/api/v1/healthz | grep -q '"status":"ok"'; then
+              echo "✅ App is ready"
+              exit 0
+            fi
+            echo "⏳ Waiting for app..."
+            sleep 3
+          done
+          echo "❌ App did not start in time"
+          exit 1
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Newman tests
+        run: |
+          cd postman
+          newman run ./postman_collection.json \
+            --folder "Health Check" \
+            --folder "Products" \
+            --environment ./postman_environment.json \
+            --env-var baseUrl="http://localhost:3000"
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi

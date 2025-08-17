@@ -10,7 +10,7 @@
 - [x] eslint
 - [x] formatter
 - [ ] jest
-- [ ] newman
+- [x] newman
 - [ ] zod to open api
 - [x] husky
 - [x] cicd
