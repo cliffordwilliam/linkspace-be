@@ -35,11 +35,11 @@ jobs:
         run: npm install
 
       - name: Build app
-        run: npm run dev:build
+        run: npm run build
 
       - name: Start app
         run: |
-          npm run dev:start &
+          npm run start &
           echo $! > app.pid
 
       - name: Wait for app to be ready

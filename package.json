@@ -8,6 +8,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc && tsc-alias",
+    "start": "node dist/index.js",
     "dev:build": "tsc --preserveWatchOutput && concurrently \"tsc -w --preserveWatchOutput\" \"tsc-alias -w\"",
     "dev:start": "nodemon dist/index.js",
     "prepare": "husky"
