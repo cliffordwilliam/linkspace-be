@@ -14,3 +14,4 @@
 - [ ] zod to open api
 - [x] husky
 - [x] cicd
+- [ ] query filter

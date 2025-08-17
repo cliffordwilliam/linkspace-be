@@ -18,10 +18,7 @@ export class TypeOrmProductRepository extends BaseProductRepository {
   }
 
   async update(updatedProduct: ProductModel): Promise<ProductModel> {
-    await this.dataSource
-      .getRepository(ProductModel)
-      .update({ product_id: updatedProduct.product_id }, updatedProduct);
-    return this.getById(updatedProduct.product_id) as Promise<ProductModel>;
+    return this.dataSource.getRepository(ProductModel).save(updatedProduct);
   }
 
   async listAll(): Promise<ProductModel[]> {

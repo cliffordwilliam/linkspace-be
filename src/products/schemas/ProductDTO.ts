@@ -6,30 +6,41 @@ import {
   MinLength,
   IsUUID,
 } from "class-validator";
+import { Expose } from "class-transformer";
+import { BaseDTO } from "@/common/dto/BaseDTO";
 
 // --- Base DTO ---
-export class ProductBaseDTO {
+export class ProductBaseDTO extends BaseDTO {
+  @Expose()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   product_name!: string;
 
-  @IsOptional()
+  @Expose()
   @IsBoolean()
-  deleted_status?: boolean = false;
+  deleted_status!: boolean;
 }
 
 // --- Create DTO ---
-export class ProductCreateDTO extends ProductBaseDTO {}
+export class ProductCreateDTO extends BaseDTO {
+  @Expose()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  product_name!: string;
+}
 
 // --- Update DTO ---
-export class ProductUpdateDTO {
+export class ProductUpdateDTO extends BaseDTO {
+  @Expose()
   @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   product_name?: string;
 
+  @Expose()
   @IsOptional()
   @IsBoolean()
   deleted_status?: boolean;
@@ -37,9 +48,13 @@ export class ProductUpdateDTO {
 
 // --- Response DTO ---
 export class ProductDTO extends ProductBaseDTO {
+  @Expose()
   @IsUUID()
   product_id!: string;
 
+  @Expose()
   date_created!: Date;
+
+  @Expose()
   date_modified!: Date;
 }

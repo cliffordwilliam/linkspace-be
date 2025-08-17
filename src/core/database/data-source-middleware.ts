@@ -7,5 +7,5 @@ export async function DataSourceMiddleware(
   next: NextFunction,
 ) {
   await TypeOrmBaseRepository.ensureInitialized();
-  return next();
+  next();
 }

@@ -7,21 +7,21 @@ import { productRouter } from "@/products/product-router";
 import { DataSourceMiddleware } from "@/core/database/data-source-middleware";
 import { Router } from "express";
 import { errorHandler } from "@/core/middlewares/error-handler";
-import { HTTP_STATUS } from "@/constants/http";
+import { healthCheckRouter } from "@/health_check/health-check-router";
 
 const app = express();
 
 app.use(express.json());
+
 app.use(cors());
 
 app.use(DataSourceMiddleware);
 
-app.get("/healthz", (_req, res) => {
-  res.status(HTTP_STATUS.OK).json({ status: "ok" });
-});
-
 export const apiRouter = Router();
+
+apiRouter.use("/healthz", healthCheckRouter);
 apiRouter.use("/products", productRouter);
+
 app.use(env.apiPrefix, apiRouter);
 
 app.use(errorHandler);

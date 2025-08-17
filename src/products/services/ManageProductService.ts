@@ -1,13 +1,14 @@
-import { ProductModel } from "../models/ProductModel";
-import { BaseProductRepository } from "../repositories/BaseProductRepository";
-import { TypeOrmProductRepository } from "../repositories/TypeOrmProductRepository";
+import { ProductModel } from "@/products/models/ProductModel";
+import { BaseProductRepository } from "@/products/repositories/BaseProductRepository";
+import { TypeOrmProductRepository } from "@/products/repositories/TypeOrmProductRepository";
 import {
   ProductCreateDTO,
   ProductUpdateDTO,
   ProductDTO,
-} from "../schemas/ProductDTO";
+} from "@/products/schemas/ProductDTO";
 import { DataSource } from "typeorm";
 import { ResourceNotFoundException } from "@/api/models/ResourceNotFoundException";
+import { plainToInstance, instanceToPlain } from "class-transformer";
 
 export class ManageProductService {
   private repo: BaseProductRepository;
@@ -16,23 +17,12 @@ export class ManageProductService {
     this.repo = new TypeOrmProductRepository(dataSource);
   }
 
-  private _toDTO(product: ProductModel): ProductDTO {
-    return {
-      product_id: product.product_id,
-      product_name: product.product_name,
-      deleted_status: product.deleted_status,
-      date_created: product.date_created,
-      date_modified: product.date_modified,
-    };
-  }
-
   async create(productData: ProductCreateDTO): Promise<ProductDTO> {
-    const product = new ProductModel();
-    product.product_name = productData.product_name;
-    product.deleted_status = productData.deleted_status ?? false;
-
+    const product = plainToInstance(ProductModel, productData);
     const createdProduct = await this.repo.create(product);
-    return this._toDTO(createdProduct);
+    return plainToInstance(ProductDTO, createdProduct, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async getById(productId: string): Promise<ProductDTO | null> {
@@ -41,30 +31,36 @@ export class ManageProductService {
       throw new ResourceNotFoundException(
         `Product with id ${productId} not found`,
       );
-    return this._toDTO(product);
+    return plainToInstance(ProductDTO, product, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async update(
     productId: string,
     updates: ProductUpdateDTO,
-  ): Promise<ProductDTO | null> {
+  ): Promise<ProductDTO> {
     const existingProduct = await this.repo.getById(productId);
     if (!existingProduct)
       throw new ResourceNotFoundException(
         `Product with id ${productId} not found`,
       );
 
-    if (updates.product_name !== undefined)
-      existingProduct.product_name = updates.product_name;
-    if (updates.deleted_status !== undefined)
-      existingProduct.deleted_status = updates.deleted_status;
+    const updatedEntity = plainToInstance(ProductModel, {
+      ...instanceToPlain(existingProduct),
+      ...updates,
+    });
 
-    const updatedProduct = await this.repo.update(existingProduct);
-    return this._toDTO(updatedProduct);
+    const saved = await this.repo.update(updatedEntity);
+    return plainToInstance(ProductDTO, saved, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async listAll(): Promise<ProductDTO[]> {
     const products = await this.repo.listAll();
-    return products.map((p) => this._toDTO(p));
+    return products.map((p) =>
+      plainToInstance(ProductDTO, p, { excludeExtraneousValues: true }),
+    );
   }
 }

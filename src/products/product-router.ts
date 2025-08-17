@@ -6,22 +6,29 @@ import {
   ProductUpdateDTO,
   ProductDTO,
 } from "@/products/schemas/ProductDTO";
-import { HTTP_STATUS } from "@/constants/http";
+import { HTTP_STATUS } from "@/common/constants/http";
+import { validateDTO } from "@/core/middlewares/validate-dto";
+import { REQUEST_SOURCE } from "@/common/constants/request-source";
+import { IdParamDTO } from "@/common/dto/IdParamDTO";
 
 export const productRouter = Router();
 const service = new ManageProductService(AppDataSource);
 
-productRouter.post("/", async (req: Request, res: Response) => {
-  const productData: ProductCreateDTO = req.body;
-  const createdProduct: ProductDTO = await service.create(productData);
-  res.status(HTTP_STATUS.CREATED).json({
-    success: true,
-    data: createdProduct,
-    meta: {},
-  });
-});
+productRouter.post(
+  "",
+  validateDTO(ProductCreateDTO, REQUEST_SOURCE.BODY),
+  async (req: Request, res: Response) => {
+    const productData: ProductCreateDTO = req.body;
+    const createdProduct: ProductDTO = await service.create(productData);
+    res.status(HTTP_STATUS.CREATED).json({
+      success: true,
+      data: createdProduct,
+      meta: {},
+    });
+  },
+);
 
-productRouter.get("/", async (_req: Request, res: Response) => {
+productRouter.get("", async (_req: Request, res: Response) => {
   const products: ProductDTO[] = await service.listAll();
   res.status(HTTP_STATUS.OK).json({
     success: true,
@@ -30,26 +37,35 @@ productRouter.get("/", async (_req: Request, res: Response) => {
   });
 });
 
-productRouter.get("/:productId", async (req: Request, res: Response) => {
-  const productId = req.params.productId;
-  const product: ProductDTO | null = await service.getById(productId);
-  res.status(HTTP_STATUS.OK).json({
-    success: true,
-    data: product,
-    meta: {},
-  });
-});
+productRouter.get(
+  "/:id",
+  validateDTO(IdParamDTO, REQUEST_SOURCE.PARAMS),
+  async (req: Request, res: Response) => {
+    const productId = req.params.id;
+    const product: ProductDTO | null = await service.getById(productId);
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: product,
+      meta: {},
+    });
+  },
+);
 
-productRouter.put("/:productId", async (req: Request, res: Response) => {
-  const productId = req.params.productId;
-  const updates: ProductUpdateDTO = req.body;
-  const updatedProduct: ProductDTO | null = await service.update(
-    productId,
-    updates,
-  );
-  res.status(HTTP_STATUS.OK).json({
-    success: true,
-    data: updatedProduct,
-    meta: {},
-  });
-});
+productRouter.put(
+  "/:id",
+  validateDTO(IdParamDTO, REQUEST_SOURCE.PARAMS),
+  validateDTO(ProductUpdateDTO, REQUEST_SOURCE.BODY),
+  async (req: Request, res: Response) => {
+    const productId = req.params.id;
+    const updates: ProductUpdateDTO = req.body;
+    const updatedProduct: ProductDTO | null = await service.update(
+      productId,
+      updates,
+    );
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: updatedProduct,
+      meta: {},
+    });
+  },
+);

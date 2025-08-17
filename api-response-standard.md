@@ -1,10 +1,10 @@
 # API Response Standard
 
-This document outlines the standardized structure for all API responses in CRUD operations, using consistent `data` and `meta` fields to ensure clarity and extensibility.
+This document outlines the standardized structure for all API responses in CRUD operations, using consistent `success`, `data`, `meta`, and `error` fields to ensure clarity, extensibility, and predictability.
 
-## Response Format
+---
 
-All responses follow this general structure:
+## 1️⃣ General Response Format
 
 ```json
 {
@@ -14,13 +14,13 @@ All responses follow this general structure:
 }
 ```
 
-- `success`: Indicates whether the request was successful (`true` or `false`).
-- `data`: Contains the main response payload.
-- `meta`: Holds additional metadata (e.g., pagination details).
+- `success` (boolean): Indicates whether the request was successful (`true` or `false`).
+- `data` (object/array/null): Contains the main response payload.
+- `meta` (object, optional): Holds additional metadata, such as pagination details.
 
 ---
 
-## CRUD Response Examples
+## 2️⃣ CRUD Response Examples
 
 ### READ (GET)
 
@@ -93,13 +93,13 @@ All responses follow this general structure:
 }
 ```
 
+- `data` and `meta` can be omitted for delete operations.
+
 ---
 
-## Handling Empty or Null Values
+## 3️⃣ Handling Empty or Null Values
 
 ### Empty Lists
-
-When a list query returns no results, the response should include an empty array for `data` and show zero in `meta.pagination.total`:
 
 ```json
 {
@@ -117,13 +117,13 @@ When a list query returns no results, the response should include an empty array
 
 ### Null Single Resource
 
-If a single resource is not found or is intentionally null, return `success: false` with a relevant error message and `data` omitted or set to `null`:
-
 ```json
 {
   "success": false,
   "error": {
-    "message": "Guest not found."
+    "message": "Guest not found.",
+    "code": "RESOURCE_NOT_FOUND",
+    "type": "ResourceNotFoundException"
   }
 }
 ```
@@ -144,30 +144,87 @@ Fields without values should be explicitly set to `null` rather than omitted:
 
 ---
 
-## Error Response Format
+## 4️⃣ Error Response Format
 
-Error responses should include at least a message describing the error. Optionally, they can include an error code and detailed field-specific messages:
+All errors follow a consistent structure:
 
 ```json
 {
   "success": false,
   "error": {
-    "message": "Validation error",
-    "code": 1234,
+    "message": "General human-readable description of the error",
+    "code": "ERROR_CODE",
+    "type": "ErrorType", // optional, e.g., class name for resource errors
     "details": [
+      // optional, for field-specific validation errors
       {
-        "field": "guest_name",
-        "message": "Guest Name is required."
-      },
-      {
-        "field": "guest_birth_date",
-        "message": "Guest Birth Date must be less than today."
+        "field": "body.property_name",
+        "message": "Human-readable validation message",
+        "type": "validation_constraint" // e.g., minLength, isBoolean
       }
     ]
   }
 }
 ```
 
-- `message` (required): General description of the error.
-- `code` (optional): Numeric error code.
-- `details` (optional): Array of specific errors tied to individual fields.
+### Examples
+
+#### Resource Not Found
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Product with id f53e804b-87a4-4651-9788-63a6a7b60871 not found",
+    "code": "RESOURCE_NOT_FOUND",
+    "type": "ResourceNotFoundException"
+  }
+}
+```
+
+#### Validation Error
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Request validation error",
+    "code": "VALIDATION_ERROR",
+    "details": [
+      {
+        "field": "body.product_name",
+        "message": "product_name must be longer than or equal to 1 characters",
+        "type": "minLength"
+      },
+      {
+        "field": "body.deleted_status",
+        "message": "deleted_status must be a boolean value",
+        "type": "isBoolean"
+      }
+    ]
+  }
+}
+```
+
+#### Internal Server Error (Generic)
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Internal server error",
+    "code": "INTERNAL_SERVER_ERROR",
+    "type": "Error"
+  }
+}
+```
+
+---
+
+### Notes
+
+- `success` is always `false` for errors.
+- `error.code` is a **string identifier** for programmatic handling.
+- `error.type` is optional; it can be used to classify the error further.
+- `error.details` is optional and used primarily for field-level validation errors.
+- Field paths in `details` should include the source (`body`, `query`, `params`) for clarity.
