@@ -16,4 +16,4 @@
 - [x] cicd
 - [x] query filter
 - [ ] move magics to const
-- [ ] make bash for cicd newman
+- [x] make bash for cicd newman
