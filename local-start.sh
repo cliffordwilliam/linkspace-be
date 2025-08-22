@@ -385,7 +385,7 @@ exit_on_lie "${PACKAGE_JSON_FILE_NAME} is valid JSON" "jq empty \"${PACKAGE_JSON
 exit_on_lie "Dependencies installed" "npm install"
 
 if [[ "$CI_MODE" -eq 1 ]]; then
-    print_banner "Skipping Docker container startup (CI mode)"
+    print_banner "Skipping Docker container startup in CI mode"
 else
     print_banner "Starting ${DBMS_CONTAINER_DESC}"
     exit_on_lie "No existing '${DBMS_CONTAINER_NAME}' ${DBMS_CONTAINER_DESC} found" "! docker container inspect \"$DBMS_CONTAINER_NAME\" >/dev/null 2>&1"
@@ -436,6 +436,7 @@ else
 fi
 
 if [[ "$CI_MODE" -eq 1 ]]; then
+    print_banner "Starting Newman in CI mode"
     exit_on_lie "Postman collection file exists" "[ -f \"$POSTMAN_COLLECTION\" ]"
     exit_on_lie "Postman environment file exists" "[ -f \"$POSTMAN_ENVIRONMENT\" ]"
     BASE_URL="${PROTOCOL}://${LOCALHOST}:${PORT}" npm run ${PACKAGE_JSON_POSTMAN_SCRIPT_NAME} || EXIT_CODE=$?
