@@ -29,16 +29,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build app
-        run: npm run build
-
-      - name: Copy env file
-        run: cp .env.example .env
+          node-version: 22.18.0
 
       - name: Wait for Postgres to be ready
         run: |
@@ -61,39 +52,7 @@ jobs:
           psql -h localhost -U postgres -d market-space-be -f db/migrations/schema.sql
           psql -h localhost -U postgres -d market-space-be -f db/migrations/seed.sql
 
-      - name: Start app
+      - name: Run local-start.sh in CI mode
         run: |
-          npm run start &
-          echo $! > app.pid
-
-      - name: Wait for app to be ready
-        run: |
-          for i in {1..20}; do
-            if curl -s http://localhost:3000/api/v1/healthz | grep -q '"status":"ok"'; then
-              echo "✅ App is ready"
-              exit 0
-            fi
-            echo "⏳ Waiting for app..."
-            sleep 3
-          done
-          echo "❌ App did not start in time"
-          exit 1
-
-      - name: Install Newman
-        run: npm install -g newman
-
-      - name: Run Newman tests
-        run: |
-          cd postman
-          newman run ./postman_collection.json \
-            --folder "Health Check" \
-            --folder "Products" \
-            --environment ./postman_environment.json \
-            --env-var baseUrl="http://localhost:3000"
-
-      - name: Stop app
-        if: always()
-        run: |
-          if [ -f app.pid ]; then
-            kill $(cat app.pid) || true
-          fi
+          chmod +x ./local-start.sh
+          ./local-start.sh --ci

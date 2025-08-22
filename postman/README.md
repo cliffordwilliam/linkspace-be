@@ -7,10 +7,8 @@ We utilize this setup to perform **end-to-end (E2E) testing** using [`newman`](h
 
 1. Install newman globally `npm i -g newman`
 2. Run testing
+3. Go to postman directory
 
 ```
-newman run ./postman_collection.json \
---folder "Health Check" \
---folder "Products" \
---environment ./postman_environment.json
+BASE_URL="http://localhost:3000" npm run test:e2e
 ```

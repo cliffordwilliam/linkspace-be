@@ -2,6 +2,11 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+CI_MODE=0
+if [[ "${1:-}" == "--ci" ]]; then
+  CI_MODE=1
+fi
+
 # === Colors ===
 readonly YELLOW='\033[1;33m'
 readonly GREEN='\033[1;32m'
@@ -28,12 +33,18 @@ readonly ENV_EXAMPLE_FILE_NAME=".env.example"
 readonly APP_NAME_DESC="BE app"
 readonly DBMS_CONTAINER_DESC="DBMS container"
 readonly DB_DIR="db/migrations"
+readonly POSTMAN_DIR="postman"
+readonly POSTMAN_COLLECTION="$POSTMAN_DIR/postman_collection.json"
+readonly POSTMAN_ENVIRONMENT="$POSTMAN_DIR/postman_environment.json"
 readonly RESET_SQL="$DB_DIR/reset_database.sql"
 readonly MIGRATION_SQL="$DB_DIR/schema.sql"
 readonly SEED_SQL="$DB_DIR/seed.sql"
 readonly DOCKER_YAML_FILE_NAME="$DB_DIR/docker-compose.yml"
 readonly PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME="dev:build"
 readonly PACKAGE_JSON_DEV_START_SCRIPT_NAME="dev:start"
+readonly PACKAGE_JSON_BUILD_SCRIPT_NAME="build"
+readonly PACKAGE_JSON_START_SCRIPT_NAME="start"
+readonly PACKAGE_JSON_POSTMAN_SCRIPT_NAME="test:e2e"
 readonly PACKAGE_JSON_FILE_NAME="package.json"
 readonly DIST_DIR="dist"
 readonly BUILT_ENTRY_FILE="$DIST_DIR/index.js"
@@ -369,37 +380,65 @@ exit_on_lie "${PACKAGE_JSON_FILE_NAME} is present" "[ -f \"${PACKAGE_JSON_FILE_N
 exit_on_lie "${PACKAGE_JSON_FILE_NAME} is valid JSON" "jq empty \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
 exit_on_lie "Dependencies installed" "npm install"
 
-print_banner "Starting ${DBMS_CONTAINER_DESC}"
-exit_on_lie "No existing '${DBMS_CONTAINER_NAME}' ${DBMS_CONTAINER_DESC} found" "! docker container inspect \"$DBMS_CONTAINER_NAME\" >/dev/null 2>&1"
-exit_on_lie "${DOCKER_YAML_FILE_NAME} exists" "[ -f \"$DOCKER_YAML_FILE_NAME\" ]"
-exit_on_lie "Starting ${DBMS_CONTAINER_DESC}" "docker compose --env-file \"$ENV_FILE_NAME\" -f \"$DOCKER_YAML_FILE_NAME\" up -d --remove-orphans"
-DID_CREATE_CONTAINER=1
-wait_for_ready "PostgreSQL" "docker exec $DBMS_CONTAINER_NAME sh -c 'pg_isready -h localhost -p $DB_PORT -U $DB_USER && psql -h localhost -p $DB_PORT -U $DB_USER -d $DB_NAME -c \"SELECT 1;\" >/dev/null'"
+if [[ "$CI_MODE" -eq 1 ]]; then
+    print_banner "Skipping Docker container startup (CI mode)"
+else
+    print_banner "Starting ${DBMS_CONTAINER_DESC}"
+    exit_on_lie "No existing '${DBMS_CONTAINER_NAME}' ${DBMS_CONTAINER_DESC} found" "! docker container inspect \"$DBMS_CONTAINER_NAME\" >/dev/null 2>&1"
+    exit_on_lie "${DOCKER_YAML_FILE_NAME} exists" "[ -f \"$DOCKER_YAML_FILE_NAME\" ]"
+    exit_on_lie "Starting ${DBMS_CONTAINER_DESC}" "docker compose --env-file \"$ENV_FILE_NAME\" -f \"$DOCKER_YAML_FILE_NAME\" up -d --remove-orphans"
+    DID_CREATE_CONTAINER=1
+    wait_for_ready "PostgreSQL" "docker exec $DBMS_CONTAINER_NAME sh -c 'pg_isready -h localhost -p $DB_PORT -U $DB_USER && psql -h localhost -p $DB_PORT -U $DB_USER -d $DB_NAME -c \"SELECT 1;\" >/dev/null'"
 
-print_banner "Initializing ${DBMS_CONTAINER_DESC}"
-# Reset
-exit_on_lie "Reset SQL file exists" "[ -f \"$RESET_SQL\" ]"
-exit_on_lie "Reset applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$RESET_SQL\""
-# Migrate
-exit_on_lie "Migration SQL file exists" "[ -f \"$MIGRATION_SQL\" ]"
-exit_on_lie "Migration applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$MIGRATION_SQL\""
-# Seed
-exit_on_lie "Seed SQL file exists" "[ -f \"$SEED_SQL\" ]"
-exit_on_lie "Seeding applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$SEED_SQL\""
+    print_banner "Initializing ${DBMS_CONTAINER_DESC}"
+    # Reset
+    exit_on_lie "Reset SQL file exists" "[ -f \"$RESET_SQL\" ]"
+    exit_on_lie "Reset applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$RESET_SQL\""
+    # Migrate
+    exit_on_lie "Migration SQL file exists" "[ -f \"$MIGRATION_SQL\" ]"
+    exit_on_lie "Migration applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$MIGRATION_SQL\""
+    # Seed
+    exit_on_lie "Seed SQL file exists" "[ -f \"$SEED_SQL\" ]"
+    exit_on_lie "Seeding applied successfully" "docker exec -i \"$DBMS_CONTAINER_NAME\" psql -h localhost -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$DB_NAME\" < \"$SEED_SQL\""
+fi
 
-print_banner "Starting ${APP_NAME_DESC}"
-exit_on_lie "\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
-exit_on_lie "\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
-exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
-npm run dev:build &
-BUILD_PID=$!
-wait_for_build "$BUILT_ENTRY_FILE" "TypeScript Build"
-npm run dev:start &
-APP_PID=$!
-wait $BUILD_PID $APP_PID
-wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
-exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "is_port_in_use ${PORT}"
-print_status "$GREEN" "$ICON_SUCCESS" "Press Ctrl C to stop"
-print_status "$GREEN" "$ICON_SUCCESS" "Visit ${APP_NAME_DESC} ${PROTOCOL}://${LOCALHOST}:${PORT}${API_PREFIX}"
-print_status "$GREEN" "$ICON_SUCCESS" "Visit ${ADMIRER_CONTAINER_NAME} ${PROTOCOL}://${LOCALHOST}:${ADMIRER_PORT}"
-wait $APP_PID
+if [[ "$CI_MODE" -eq 1 ]]; then
+    print_banner "Starting ${APP_NAME_DESC} in CI mode"
+    exit_on_lie "\"${PACKAGE_JSON_BUILD_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_BUILD_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+    exit_on_lie "\"${PACKAGE_JSON_START_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_START_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+    exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
+    npm run ${PACKAGE_JSON_BUILD_SCRIPT_NAME}
+    wait_for_build "$BUILT_ENTRY_FILE" "TypeScript Build"
+    npm run ${PACKAGE_JSON_START_SCRIPT_NAME} &
+    APP_PID=$!
+    wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/api/v1/healthz >/dev/null"
+else
+    print_banner "Starting ${APP_NAME_DESC}"
+    exit_on_lie "\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+    exit_on_lie "\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\" script exists in ${PACKAGE_JSON_FILE_NAME}" "jq -e '.scripts[\"${PACKAGE_JSON_DEV_START_SCRIPT_NAME}\"]' \"${PACKAGE_JSON_FILE_NAME}\" >/dev/null 2>&1"
+    exit_on_lie "Port ${PORT} is free" "is_port_free ${PORT}"
+    npm run ${PACKAGE_JSON_DEV_BUILD_SCRIPT_NAME} &
+    BUILD_PID=$!
+    wait_for_build "$BUILT_ENTRY_FILE" "TypeScript Build"
+    npm run ${PACKAGE_JSON_DEV_START_SCRIPT_NAME} &
+    APP_PID=$!
+    wait $BUILD_PID $APP_PID
+    wait_for_ready "${APP_NAME_DESC}" "curl -sf ${PROTOCOL}://${LOCALHOST}:${PORT}/healthz >/dev/null"
+    exit_on_lie "${APP_NAME_DESC} is running on ${PORT}" "is_port_in_use ${PORT}"
+    print_status "$GREEN" "$ICON_SUCCESS" "Press Ctrl C to stop"
+    print_status "$GREEN" "$ICON_SUCCESS" "Visit ${APP_NAME_DESC} ${PROTOCOL}://${LOCALHOST}:${PORT}${API_PREFIX}"
+    print_status "$GREEN" "$ICON_SUCCESS" "Visit ${ADMIRER_CONTAINER_NAME} ${PROTOCOL}://${LOCALHOST}:${ADMIRER_PORT}"
+    wait $APP_PID
+fi
+
+if [[ "$CI_MODE" -eq 1 ]]; then
+    exit_on_lie "Postman collection file exists" "[ -f \"$POSTMAN_COLLECTION\" ]"
+    exit_on_lie "Postman environment file exists" "[ -f \"$POSTMAN_ENVIRONMENT\" ]"
+    BASE_URL="${PROTOCOL}://${LOCALHOST}:${PORT}" npm run ${PACKAGE_JSON_POSTMAN_SCRIPT_NAME}
+
+    print_banner "Stopping ${APP_NAME_DESC}"
+    if [ "${APP_PID:-0}" -ne 0 ]; then
+        kill -- -"$APP_PID" 2>/dev/null || true
+        APP_PID=0
+    fi
+fi
