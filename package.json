@@ -8,7 +8,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test:e2e": "newman run ./postman/postman_collection.json --environment ./postman/postman_environment.json --env-var baseUrl=$BASE_URL",
+    "test:e2e": "newman run ./postman/postman_collection.json --environment ./postman/postman_environment.json --env-var baseUrl=$BASE_URL --bail failure",
     "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
     "dev:build": "tsc --preserveWatchOutput && concurrently \"tsc -w --preserveWatchOutput\" \"tsc-alias -w\"",

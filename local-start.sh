@@ -54,6 +54,7 @@ DID_CLEANUP=0
 DID_CREATE_CONTAINER=0
 APP_PID=0
 BUILD_PID=0
+EXIT_CODE=0
 
 print_status() {
     local color="$1"
@@ -95,10 +96,10 @@ exit_helper() {
         message_color="$RED"
     fi
 
-    print_status "$RED" "$ICON_EXIT" "Exiting:" "$exit_message"
+    print_status "$message_color" "$ICON_EXIT" "Exiting:" "$exit_message"
     printf "\n"
 
-    exit "$exit_code"
+    EXIT_CODE="$exit_code"
 }
 
 exit_on_lie() {
@@ -237,7 +238,10 @@ cleanup() {
     fi
     printf "\n"
 
-    exit_helper "${ICON_SUCCESS} Cleanup complete." 0
+    print_status "$GREEN" "$ICON_EXIT" "Cleanup complete"
+    printf "\n"
+
+    exit "$EXIT_CODE"
 }
 trap cleanup SIGINT SIGTERM EXIT ERR
 
@@ -434,19 +438,10 @@ fi
 if [[ "$CI_MODE" -eq 1 ]]; then
     exit_on_lie "Postman collection file exists" "[ -f \"$POSTMAN_COLLECTION\" ]"
     exit_on_lie "Postman environment file exists" "[ -f \"$POSTMAN_ENVIRONMENT\" ]"
-
-    BASE_URL="${PROTOCOL}://${LOCALHOST}:${PORT}" npm run ${PACKAGE_JSON_POSTMAN_SCRIPT_NAME}
-    TEST_EXIT_CODE=$?
-
-    print_banner "Stopping ${APP_NAME_DESC}"
-    if [ "${APP_PID:-0}" -ne 0 ]; then
-        kill -- -"$APP_PID" 2>/dev/null || true
-        APP_PID=0
-    fi
-
-    if [[ "$TEST_EXIT_CODE" -eq 0 ]]; then
-        exit_helper "All Newman tests passed 🎉" 0
+    BASE_URL="${PROTOCOL}://${LOCALHOST}:${PORT}" npm run ${PACKAGE_JSON_POSTMAN_SCRIPT_NAME} || EXIT_CODE=$?
+    if [[ "$EXIT_CODE" -eq 0 ]]; then
+        print_status "$GREEN" "$ICON_EXIT" "All Newman tests passed"
     else
-        exit_helper "Newman tests failed ❌" "$TEST_EXIT_CODE"
+        print_status "$RED" "$ICON_FAIL" "Newman tests failed"
     fi
 fi
