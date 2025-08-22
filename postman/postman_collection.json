@@ -15,7 +15,7 @@
               "pm.test(\"Healthz is OK\", function () {",
               "  pm.response.to.have.status(200);",
               "  const json = pm.response.json();",
-              "  pm.expect(json.status).to.eql('not-ok');",
+              "  pm.expect(json.status).to.eql('ok');",
               "});"
             ],
             "type": "text/javascript"
