@@ -434,11 +434,19 @@ fi
 if [[ "$CI_MODE" -eq 1 ]]; then
     exit_on_lie "Postman collection file exists" "[ -f \"$POSTMAN_COLLECTION\" ]"
     exit_on_lie "Postman environment file exists" "[ -f \"$POSTMAN_ENVIRONMENT\" ]"
+
     BASE_URL="${PROTOCOL}://${LOCALHOST}:${PORT}" npm run ${PACKAGE_JSON_POSTMAN_SCRIPT_NAME}
+    TEST_EXIT_CODE=$?
 
     print_banner "Stopping ${APP_NAME_DESC}"
     if [ "${APP_PID:-0}" -ne 0 ]; then
         kill -- -"$APP_PID" 2>/dev/null || true
         APP_PID=0
+    fi
+
+    if [[ "$TEST_EXIT_CODE" -eq 0 ]]; then
+        exit_helper "All Newman tests passed 🎉" 0
+    else
+        exit_helper "Newman tests failed ❌" "$TEST_EXIT_CODE"
     fi
 fi
